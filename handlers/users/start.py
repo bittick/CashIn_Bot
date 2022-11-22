@@ -5,6 +5,7 @@ from loader import dp
 from settings import django_url
 from keyboards.inline.ikb import courier_kb, dispatcher_kb
 
+
 @dp.message_handler(CommandStart())
 async def bot_start(message: types.Message):
     req = requests.get(url=django_url + f'user/{message.from_user.id}/')

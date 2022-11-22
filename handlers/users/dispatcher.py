@@ -57,8 +57,9 @@ async def input_amount_dispatcher_cashout(message: types.Message, state: FSMCont
             await message.answer('Операция отменена')
         else:
             operators = requests.get(django_url+'operators/').json()
-            lables = [i['name'] for i in operators]
-            callbacks = [i['id'] for i in operators]
+            print(operators)
+            lables = [i['user_name'] for i in operators]
+            callbacks = [i['tg_id'] for i in operators]
             ikb = create_ikb(lables, callbacks)
             msg = await message.answer(text='Выберите оператора', reply_markup=ikb)
             await state.update_data(msg=msg.message_id, id=msg.chat.id, amount=amount)
@@ -90,12 +91,12 @@ async def select_operator_cashin_dispatcher(callback_query: types.CallbackQuery,
             msg = await bot.edit_message_text(
                 message_id=state_data['msg'],
                 chat_id=state_data['id'],
-                text=f'Операция: кэшин \nОператор: {operator["name"]} \nСумма: {state_data["amount"]}',
+                text=f'Операция: кэшин \nОператор: {operator["user_name"]} \nСумма: {state_data["amount"]}',
                 reply_markup=confirm_kb,
             )
             await state.update_data(
-                operator=operator['id'],
-                operator_name=operator["name"],
+                operator=operator['tg_id'],
+                operator_name=operator["user_name"],
             )
             await DispatcherCashin.confirm.set()
         except Exception as e:
