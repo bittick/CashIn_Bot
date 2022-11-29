@@ -1,1 +1,1 @@
-django_url = 'http://localhost:8000/api/'
+django_url = 'http://194.58.92.160:8000/api/'
