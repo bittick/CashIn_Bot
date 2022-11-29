@@ -22,4 +22,4 @@ async def bot_start(message: types.Message):
                 reply_markup=dispatcher_kb,
             )
     else:
-        await message.reply('Вы не зарегистрированны!')
+        await message.reply('Вы не зарегистрированы!')

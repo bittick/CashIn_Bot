@@ -104,6 +104,7 @@ async def select_operator_cashin_dispatcher(callback_query: types.CallbackQuery,
                 text='Ошибка на стороне сервера.\n Операция была отменена'
             )
 
+
 @dp.callback_query_handler(text='confirm', state=DispatcherCashin.confirm)
 async def confirm_cashout_dispatcher(callback_query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()

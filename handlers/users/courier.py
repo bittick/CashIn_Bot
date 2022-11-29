@@ -103,14 +103,21 @@ async def select_operator_cashin(callback_query: types.CallbackQuery, state: FSM
     else:
         try:
             operator_req = requests.get(django_url + f'operators/{state_data["operator"]}/')
-            if operator_req.status_code != 200:
+            cards_operators_req = requests.get(django_url + f'operator/{state_data["operator"]}/cards/')
+            if operator_req.status_code != 200 or cards_operators_req.status_code != 200:
                 raise Exception(
                     f'req status code: {operator_req.status_code}')
             operator = operator_req.json()
+            cards = cards_operators_req.json()
+            print(callback_query.data[4:])
+            print(cards)
+            for card in cards:
+                if int(callback_query.data[4:]) == card['id']:
+                    cur_card = card
             msg = await bot.edit_message_text(
                 message_id=state_data['msg'],
                 chat_id=state_data['id'],
-                text=f'Операция: кэшин \nОператор: {operator["user_name"]} \nСумма: {state_data["amount"]} Карта: .........',
+                text=f'Операция: кэшин \nОператор: {operator["user_name"]} \nСумма: {state_data["amount"]} \nКарта: ************{cur_card["card_number"][-4:]}',
                 reply_markup=confirm_kb,
             )
             await state.update_data(
