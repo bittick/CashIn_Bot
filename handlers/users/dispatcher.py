@@ -70,7 +70,34 @@ async def input_amount_dispatcher_cashout(message: types.Message, state: FSMCont
         await message.answer('Значение указанно не верно.\nЕсли вы хотите отменить операцию введите 0')
 
 
-@dp.callback_query_handler(lambda c: c.data.startswith('ikb_'), state=DispatcherCashin.choose_operator)
+@dp.callback_query_handler(state=DispatcherCashin.choose_operator)
+async def input_amount_courier_cashin(call: types.CallbackQuery, state: FSMContext):
+    state_data = await state.get_data()
+    try:
+        req = requests.get(url=django_url + f'user/{call.from_user.id}/')
+        if req.status_code == 200:
+            cards = requests.get(django_url + f'operator/{call.data[4:]}/cards/').json()
+            lables = [i['card_number'] for i in cards]
+            callbacks = [i['id'] for i in cards]
+            ikb = create_ikb(lables, callbacks)
+            msg = await call.message.answer(text='Выберите карту оператора', reply_markup=ikb)
+            await state.update_data(msg=msg.message_id,
+                                    id=msg.chat.id,
+                                    amount=state_data['amount'],
+                                    operator=call.data[4:],
+                                    )
+            print(call.data)
+            await DispatcherCashin.choose_card.set()
+        else:
+            await call.message.answer(f'Ошибка при отправке запроса на сервер\nкод ошибки: {req.status_code}')
+            await state.finish()
+
+    except ValueError:
+        await CourierCashin.input_amount.set()
+        await call.message.answer('Значение указанно не верно.\nЕсли вы хотите отменить кэшин введите 0')
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('ikb_'), state=DispatcherCashin.choose_card)
 async def select_operator_cashin_dispatcher(callback_query: types.CallbackQuery, state: FSMContext):
     state_data = await state.get_data()
     if callback_query.data == 'ikb_cancel':
