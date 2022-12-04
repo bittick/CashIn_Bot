@@ -10,7 +10,7 @@ import requests
 
 async def notifiy_dispatchers(text, courier, amount, operator_name=None):
     r = requests.get(django_url + 'dispatcher/').json()
-    text_message = f'{text}\nКурьер: {courier}\nСумма: {amount}'
+    text_message = f'{text}\nКурьер: {courier}\nСумма: {amount} Карта: {card_number}'
     if operator_name:
         text_message += f'\nОператор: {operator_name}'
     if r:
@@ -109,6 +109,7 @@ async def select_operator_cashin(callback_query: types.CallbackQuery, state: FSM
                     f'req status code: {operator_req.status_code}')
             operator = operator_req.json()
             cards = cards_operators_req.json()
+            card_number = card_number.json()['card_number']
             print(callback_query.data[4:])
             print(cards)
             for card in cards:
@@ -117,13 +118,14 @@ async def select_operator_cashin(callback_query: types.CallbackQuery, state: FSM
             msg = await bot.edit_message_text(
                 message_id=state_data['msg'],
                 chat_id=state_data['id'],
-                text=f'Операция: кэшин \nОператор: {operator["user_name"]} \nСумма: {state_data["amount"]} \nКарта: ************{cur_card["card_number"][-4:]}',
+                text=f'Операция: кэшин \nОператор: {operator["user_name"]} \nКарта: {card_number} \nСумма: {state_data["amount"]} \nКарта: ************{cur_card["card_number"][-4:]}',
                 reply_markup=confirm_kb,
             )
             await state.update_data(
                 operator=operator['tg_id'],
                 operator_name=operator["user_name"],
                 card_id=callback_query.data[4:],
+                card_number=card_number
             )
             await CourierCashin.confirm.set()
         except Exception as e:

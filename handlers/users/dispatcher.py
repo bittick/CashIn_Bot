@@ -8,11 +8,11 @@ from aiogram.utils.exceptions import ChatNotFound
 import requests
 
 
-async def notifiy_couriers(text, amount, operator_name=None):
+async def notifiy_couriers(text, amount, card_number=None, operator_name=None):
     r = requests.get(django_url + 'courier/').json()
     text_message = f'{text}\nСумма:{amount}'
     if operator_name:
-        text_message += f'\nОператор: {operator_name}'
+        text_message += f'\nОператор: {operator_name} \nКарта: {card_number}'
     if r:
         for courier in r:
             try:
@@ -80,7 +80,7 @@ async def input_amount_courier_cashin(call: types.CallbackQuery, state: FSMConte
             lables = [i['card_number'] for i in cards]
             callbacks = [i['id'] for i in cards]
             ikb = create_ikb(lables, callbacks)
-            msg = await call.message.answer(text='Выберите карту оператора', reply_markup=ikb)
+            msg = await call.message.edit_text(text='Выберите карту оператора', reply_markup=ikb)
             await state.update_data(msg=msg.message_id,
                                     id=msg.chat.id,
                                     amount=state_data['amount'],
@@ -108,28 +108,34 @@ async def select_operator_cashin_dispatcher(callback_query: types.CallbackQuery,
         )
         await state.finish()
     else:
-        try:
-            operator_req = requests.get(
-                f'{django_url}operators/{callback_query.data[4:]}/')
-            if operator_req.status_code != 200:
-                raise Exception(
-                    f'req status code: {operator_req.status_code }')
-            operator = operator_req.json()
-            msg = await bot.edit_message_text(
-                message_id=state_data['msg'],
-                chat_id=state_data['id'],
-                text=f'Операция: кэшин \nОператор: {operator["user_name"]} \nСумма: {state_data["amount"]}',
-                reply_markup=confirm_kb,
-            )
-            await state.update_data(
-                operator=operator['tg_id'],
-                operator_name=operator["user_name"],
-            )
-            await DispatcherCashin.confirm.set()
-        except Exception as e:
-            await callback_query.message.answer(
-                text='Ошибка на стороне сервера.\n Операция была отменена'
-            )
+        # try:
+        print(callback_query.data[4:])
+        operator_req = requests.get(django_url + f'operators/{state_data["operator"]}/')
+        cards_operators_req = requests.get(django_url + f'operator/{state_data["operator"]}/cards/')
+        card_req = requests.get(django_url + f'get/card/{callback_query.data[4:]}/')
+        if operator_req.status_code != 200:
+            raise Exception(
+                f'req status code: {operator_req.status_code }')
+        operator = operator_req.json()
+        print(card_req.status_code)
+        card_number = card_req.json()['card_number']
+
+        msg = await bot.edit_message_text(
+            message_id=state_data['msg'],
+            chat_id=state_data['id'],
+            text=f'Операция: кэшин \nОператор: {operator["user_name"]} \nКарта: {card_number} \nСумма: {state_data["amount"]}',
+            reply_markup=confirm_kb,
+        )
+        await state.update_data(
+            operator=operator['tg_id'],
+            operator_name=operator["user_name"],
+            card_number=card_number
+        )
+        await DispatcherCashin.confirm.set()
+        # except Exception as e:
+        #     await callback_query.message.answer(
+        #         text='Ошибка на стороне сервера.\n Операция была отменена'
+        #     )
 
 
 @dp.callback_query_handler(text='confirm', state=DispatcherCashin.confirm)
@@ -138,6 +144,7 @@ async def confirm_cashout_dispatcher(callback_query: types.CallbackQuery, state:
     await notifiy_couriers(
         amount=data['amount'],
         operator_name=data['operator_name'],
+        card_number=data['card_number'],
         text='Заявка\nОперация: кэшин'
     )
     await bot.edit_message_text(
